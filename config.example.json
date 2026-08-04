@@ -1,0 +1,5 @@
+{
+  "aiBaseURL": "https://your-openai-compatible-gateway/v1",
+  "aiModel": "your-model-name",
+  "aiToken": "sk-..."
+}
