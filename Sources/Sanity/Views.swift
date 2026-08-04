@@ -416,7 +416,7 @@ struct SettingsView: View {
                         .textFieldStyle(.roundedBorder)
                     TextField("Model", text: $store.aiModel)
                         .textFieldStyle(.roundedBorder)
-                    Text("Summarizes notes and picks a title: fix, monitor, notify, investigate, mitigate, review.")
+                    Text("Summarizes notes and picks a title: fix, monitor, notify, triage, mitigate, review.")
                         .font(.system(size: 10))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)

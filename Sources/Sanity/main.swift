@@ -252,8 +252,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private func setupStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = item.button {
-            let image = NSImage(systemSymbolName: "checklist", accessibilityDescription: "Task Widgets")
-                ?? NSImage(systemSymbolName: "list.bullet", accessibilityDescription: "Task Widgets")
+            let image = NSImage(systemSymbolName: "checklist", accessibilityDescription: "Sanity")
+                ?? NSImage(systemSymbolName: "list.bullet", accessibilityDescription: "Sanity")
             if let image {
                 image.isTemplate = true
                 button.image = image
@@ -266,7 +266,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         menu.addItem(withTitle: "Center on Top", action: #selector(menuCenter), keyEquivalent: "").target = self
         menu.addItem(withTitle: "Open tasks.md", action: #selector(menuOpenFile), keyEquivalent: "").target = self
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Quit Task Widgets", action: #selector(menuQuit), keyEquivalent: "q").target = self
+        menu.addItem(withTitle: "Quit Sanity", action: #selector(menuQuit), keyEquivalent: "q").target = self
         item.menu = menu
         statusItem = item
     }
@@ -279,7 +279,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let appItem = NSMenuItem()
         mainMenu.addItem(appItem)
         let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "Quit Task Widgets", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(withTitle: "Quit Sanity", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appItem.submenu = appMenu
 
         let editItem = NSMenuItem()

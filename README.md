@@ -7,7 +7,7 @@ the card. Everything is backed by a plain markdown file, so it is editable by
 hand and survives reboots.
 
 Optionally, an OpenAI-compatible model can title and summarize each task for
-you: it picks an emoji category (Fix, Monitor, Notify, Investigate, Mitigate,
+you: it picks an emoji category (Fix, Monitor, Notify, Triage, Mitigate,
 Review) and writes a short preview.
 
 ## Features
