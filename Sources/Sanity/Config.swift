@@ -1,6 +1,6 @@
 import Foundation
 
-/// Optional local config, read from ~/.config/taskwidgets/config.json.
+/// Optional local config, read from ~/.config/sanity/config.json.
 /// Used to seed AI defaults so no gateway URL, model, or key is hardcoded in
 /// source (the repo can be public; this file stays on the machine).
 ///
@@ -19,7 +19,7 @@ struct AppConfig {
 
     static var fileURL: URL {
         FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".config/taskwidgets/config.json")
+            .appendingPathComponent(".config/sanity/config.json")
     }
 
     static func load() -> AppConfig {

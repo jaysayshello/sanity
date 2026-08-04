@@ -2,12 +2,12 @@
 import PackageDescription
 
 let package = Package(
-    name: "TaskWidgets",
+    name: "Sanity",
     platforms: [.macOS(.v13)],
     targets: [
         .executableTarget(
-            name: "TaskWidgets",
-            path: "Sources/TaskWidgets"
+            name: "Sanity",
+            path: "Sources/Sanity"
         )
     ]
 )

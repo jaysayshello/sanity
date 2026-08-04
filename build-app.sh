@@ -4,8 +4,8 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-APP_NAME="TaskWidgets"
-BUNDLE_ID="com.jaylansiquot.taskwidgets"
+APP_NAME="Sanity"
+BUNDLE_ID="com.jaysayshello.sanity"
 APP_DIR="build/${APP_NAME}.app"
 
 echo "Building release binary..."
@@ -28,7 +28,7 @@ cat > "${APP_DIR}/Contents/Info.plist" <<PLIST
     <key>CFBundleName</key>
     <string>${APP_NAME}</string>
     <key>CFBundleDisplayName</key>
-    <string>Task Widgets</string>
+    <string>Sanity</string>
     <key>CFBundleIdentifier</key>
     <string>${BUNDLE_ID}</string>
     <key>CFBundleVersion</key>

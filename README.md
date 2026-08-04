@@ -1,51 +1,40 @@
-# Task Widgets
+# Sanity
 
-A small, fast, native SwiftUI macOS app that floats a row of square task
-cards at the top-left of the desktop. Each card is one task: a title plus a
-short summary. Click a card to open a fast popover with the full context.
-The whole list is backed by a plain markdown file, so it is editable by hand
-and survives reboots.
+A small, fast, native macOS desktop widget for tasks. Square sticky-note cards
+pin to the top of your desktop, each one a task with a title and a short
+preview. Click a card for a fast centered editor with a connector line back to
+the card. Everything is backed by a plain markdown file, so it is editable by
+hand and survives reboots.
 
-## What it does
+Optionally, an OpenAI-compatible model can title and summarize each task for
+you: it picks an emoji category (Fix, Monitor, Notify, Investigate, Mitigate,
+Review) and writes a short preview.
 
-- One square card per task, pinned top-left, floating above normal windows and
-  on every Space.
-- Card shows the task title and a short (~5 word) summary line.
-- Click a card for a fast popover to edit the title, summary and detailed
-  context.
-- Check a task off, add a task (the dashed `+` card), or delete via right-click.
-- Mildly transparent, with an adjustable transparency slider (the
-  `slider.horizontal.3` button on the right of the row).
-- Persists to `tasks.md`. Edits made in an external editor show up in the
-  widget within ~1.5s, and edits in the widget write straight back to the file.
+## Features
 
-## Markdown format
+- One square card per task, pinned to the desktop, on every Space.
+- Fast centered editor with a connector line to the source card.
+- Drag cards left/right to reorder; lock the widget in place.
+- Adjustable size (with a percent field) and transparency.
+- Menu bar item: new task, center, open the file, quit.
+- Markdown-backed and reloads on external edits.
+- Optional AI: emoji title + short preview, auto-run on new tasks and re-run
+  when you edit a task.
 
-`tasks.md` lives in the project folder. One task per `##` heading:
+## Install
 
-```markdown
-# Tasks
+Download `Sanity.dmg` from the latest release, open it, and drag **Sanity**
+into Applications. Launch it from Spotlight or Applications.
 
-## Ship the widget app
-Get v1 building and running
+It runs as a menu bar app (no Dock icon). The first launch seeds a few example
+tasks.
 
-Longer context in markdown, as many lines as you want.
+## Configuration (optional AI)
 
-## [x] Something already finished
-Short summary line
-```
+The AI feature talks to any OpenAI-compatible Chat Completions endpoint.
+Nothing is hardcoded; it reads a local config file:
 
-- `[x]` right after `##` marks the task done. `[ ]` or nothing means open.
-- The first non-empty line under a heading is the card summary.
-- Everything after that is the detailed context shown in the popover.
-
-## Configuration (AI)
-
-The optional AI feature (auto title + preview) talks to any OpenAI-compatible
-Chat Completions endpoint. Nothing gateway-specific is hardcoded; it reads a
-local config file that stays on your machine:
-
-`~/.config/taskwidgets/config.json`
+`~/.config/sanity/config.json`
 
 ```json
 {
@@ -55,38 +44,37 @@ local config file that stays on your machine:
 }
 ```
 
-Copy `config.example.json` there and fill it in. These values seed the
-defaults; anything you change in the in-app Settings popover is saved to
-UserDefaults and takes precedence. The config file and your `tasks.md` are
-gitignored so they never get committed.
+Copy `config.example.json` there and fill it in, then turn on **Enable AI** in
+the settings popover. Values you change in-app take precedence. Your tasks
+(`~/.config/sanity/tasks.md`) and this config file stay on your machine.
 
-## Build & run
+## Task file format
 
-```bash
-# Dev build + run
-swift run
+One task per `##` heading:
 
-# Build a double-clickable .app bundle (release, no Dock icon)
-./build-app.sh
-open build/TaskWidgets.app
+```markdown
+# Tasks
+
+## 🔧 Fix
+Update the Terraform module for the cache key
+
+Longer notes go here, as many lines as you want.
 ```
 
-To launch at login: System Settings → General → Login Items → add
-`build/TaskWidgets.app`.
+The first non-empty line under a heading is the card preview; the rest is the
+detailed context. `## [x] Title` marks a task done.
 
-## Architecture
+## Build from source
 
-- `TaskModel.swift` — the `TaskItem` value type (title, done, body, derived
-  summary/context).
-- `MarkdownStore.swift` — parse and serialize the task list to/from markdown.
-- `TaskStore.swift` — owns the list, reads/writes the file, polls for external
-  edits, stores the transparency setting.
-- `Views.swift` — the card row, the card, the add card, the detail popover, the
-  settings popover.
-- `main.swift` — the borderless floating `NSPanel` and app lifecycle
-  (`.accessory` activation, so no Dock icon).
+Requires macOS 13+ and a Swift 6 toolchain (Xcode command line tools is
+enough).
 
-## Requirements
+```bash
+swift run              # dev build + run
+./build-app.sh         # build Sanity.app into build/
+./make-dmg.sh          # build the app and package build/Sanity.dmg
+```
 
-- macOS 13+, Swift 6 toolchain (Command Line Tools is enough; full Xcode not
-  required).
+## License
+
+MIT. See [LICENSE](LICENSE).

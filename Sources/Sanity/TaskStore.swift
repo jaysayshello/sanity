@@ -73,7 +73,7 @@ final class TaskStore: ObservableObject {
         self.aiModel = defaults.string(forKey: "aiModel") ?? config.aiModel ?? ""
 
         let dir = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Projects/2026-08-03-macos-desktop-task-widgets", isDirectory: true)
+            .appendingPathComponent(".config/sanity", isDirectory: true)
         self.fileURL = dir.appendingPathComponent("tasks.md")
 
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
