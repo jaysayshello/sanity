@@ -33,7 +33,7 @@ struct WidgetView: View {
         .padding(.horizontal, spacing)
         .padding(.vertical, 12)
         .background(Color.clear)
-        .animation(.spring(response: 0.32, dampingFraction: 0.78), value: visibleTasks.map(\.id))
+        .animation(.spring(response: 0.24, dampingFraction: 0.86), value: visibleTasks.map(\.id))
     }
 
     private var toolbar: some View {
@@ -112,7 +112,7 @@ struct TaskCardView: View {
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
         .scaleEffect(dropTargeted ? 1.06 : 1)
-        .animation(.spring(response: 0.25, dampingFraction: 0.7), value: dropTargeted)
+        .animation(.spring(response: 0.16, dampingFraction: 0.82), value: dropTargeted)
         .draggable(task.id.uuidString)
         .dropDestination(for: String.self) { items, _ in
             guard let first = items.first, let dragged = UUID(uuidString: first) else { return false }
