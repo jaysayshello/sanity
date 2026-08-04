@@ -33,6 +33,7 @@ struct WidgetView: View {
         .padding(.horizontal, spacing)
         .padding(.vertical, 12)
         .background(Color.clear)
+        .animation(.spring(response: 0.32, dampingFraction: 0.78), value: visibleTasks.map(\.id))
     }
 
     private var toolbar: some View {
@@ -65,6 +66,7 @@ struct TaskCardView: View {
     let size: CGFloat
     var scale: CGFloat = 1
     @State private var hovering = false
+    @State private var dropTargeted = false
 
     var body: some View {
         Button {
@@ -109,12 +111,14 @@ struct TaskCardView: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
+        .scaleEffect(dropTargeted ? 1.06 : 1)
+        .animation(.spring(response: 0.25, dampingFraction: 0.7), value: dropTargeted)
         .draggable(task.id.uuidString)
         .dropDestination(for: String.self) { items, _ in
             guard let first = items.first, let dragged = UUID(uuidString: first) else { return false }
             store.moveTask(dragged, onto: task.id)
             return true
-        }
+        } isTargeted: { dropTargeted = $0 }
         .contextMenu {
             Button("Open detail") {
                 NotificationCenter.default.post(name: .openEditor, object: task.id.uuidString)
