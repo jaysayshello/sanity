@@ -162,6 +162,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main
         ) { [weak self] _ in self?.panel.orderFrontRegardless() }
+
+        // On wake or a display-geometry change, the window server can nudge the
+        // panel off its anchor (into the middle of the screen). Re-apply the
+        // saved top position once things settle.
+        let ws = NSWorkspace.shared.notificationCenter
+        for name in [NSWorkspace.didWakeNotification, NSWorkspace.screensDidWakeNotification] {
+            ws.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                self?.repositionAfterWake()
+            }
+        }
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
+        ) { [weak self] _ in self?.repositionAfterWake() }
+    }
+
+    private func repositionAfterWake() {
+        // Screen geometry can keep settling for a moment after wake, so
+        // re-apply a couple of times.
+        for delay in [0.3, 1.0, 2.0] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                self?.resizeToFit()
+                self?.panel.orderFrontRegardless()
+            }
+        }
     }
 
     private func persistLocation() {
