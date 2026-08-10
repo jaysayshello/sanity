@@ -8,7 +8,7 @@ hand and survives reboots.
 
 Optionally, an OpenAI-compatible model can title and summarize each task for
 you: it picks an emoji category (Fix, Monitor, Notify, Triage, Mitigate,
-Review) and writes a short preview.
+Review, Life) and writes a short preview.
 
 ## Features
 

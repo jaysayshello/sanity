@@ -10,7 +10,7 @@ struct AISummary {
 /// preview. Auth is a bearer key (the `sk-...` style token).
 enum AIService {
     /// Allowed card titles. The model must pick exactly one.
-    static let categories = ["fix", "monitor", "notify", "triage", "mitigate", "review"]
+    static let categories = ["fix", "monitor", "notify", "triage", "mitigate", "review", "life"]
 
     /// Emoji shown before each title.
     static let emoji: [String: String] = [
@@ -20,6 +20,7 @@ enum AIService {
         "triage": "\u{1F50D}",
         "mitigate": "\u{1F6E1}",
         "review": "\u{1F4DD}",
+        "life": "\u{1F331}",
     ]
 
     /// Max words in the generated card preview. Kept short so the card never
