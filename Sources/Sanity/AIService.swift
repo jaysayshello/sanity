@@ -5,6 +5,15 @@ struct AISummary {
     let summary: String
 }
 
+/// Result of organizing raw standup notes: a "<emoji> Standup" title whose
+/// emoji reflects the day's focus, a short card preview, and the notes
+/// rewritten as bullet points.
+struct StandupResult {
+    let title: String
+    let summary: String
+    let bullets: String
+}
+
 /// Calls an OpenAI-compatible Chat Completions endpoint (OpenAI, a LiteLLM
 /// gateway, OpenWebUI, etc.) to categorize a task and write a short card
 /// preview. Auth is a bearer key (the `sk-...` style token).
@@ -26,6 +35,11 @@ enum AIService {
     /// Max words in the generated card preview. Kept short so the card never
     /// needs to truncate with an ellipsis.
     static let summaryWordLimit = 6
+
+    /// Emoji used for a standup card when the model doesn't return a usable one.
+    /// The variation selector forces colour emoji presentation; without it this
+    /// codepoint defaults to text and renders as a blank box.
+    static let standupFallbackEmoji = "\u{1F5D2}\u{FE0F}"  // spiral notepad
 
     enum AIError: LocalizedError {
         case notConfigured
@@ -62,13 +76,113 @@ enum AIService {
             ? "(no details provided)"
             : context
 
+        let text = try await complete(
+            system: system, user: userText, url: url,
+            token: token, model: model, maxTokens: 150
+        )
+        let json = extractJSON(from: text)
+        let parsed = (try? JSONSerialization.jsonObject(with: Data(json.utf8))) as? [String: Any]
+
+        var category = (parsed?["title"] as? String ?? "").lowercased().trimmingCharacters(in: .whitespaces)
+        if !categories.contains(category) { category = "fix" }
+        // Non-breaking space keeps the emoji and word on one line on the card.
+        let title = "\(emoji[category] ?? "")\u{00A0}\(category.capitalized)".trimmingCharacters(in: .whitespaces)
+
+        var summary = (parsed?["summary"] as? String ?? text).trimmingCharacters(in: .whitespacesAndNewlines)
+        summary = clampWords(summary, to: summaryWordLimit)
+
+        return AISummary(title: title, summary: summary)
+    }
+
+    /// Organize raw standup notes into a daily standup: a bulleted rewrite of
+    /// the notes plus an emoji that represents what the day is focused on.
+    static func organizeStandup(context: String, token: String, baseURL: String, model: String) async throws -> StandupResult {
+        let token = token.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !token.isEmpty else { throw AIError.notConfigured }
+
+        let model = model.trimmingCharacters(in: .whitespaces)
+        var base = baseURL.trimmingCharacters(in: .whitespaces)
+        while base.hasSuffix("/") { base.removeLast() }
+        guard let url = URL(string: "\(base)/chat/completions") else { throw AIError.badURL }
+
+        let system = """
+        You organize a person's raw standup notes into their daily standup.
+        Rewrite the notes as short, specific markdown bullet points, one item per bullet.
+        Only reorganize what is given: do not invent work, and keep the original meaning.
+        If the notes clearly separate finished, planned, and blocked work, order them that way; do not add headers.
+        Choose a single emoji that best represents what they are focused on today.
+        Write a preview of at most \(summaryWordLimit) words summarizing the day: plain, specific, no bullet, no trailing period, no quotes.
+        Respond with ONLY minified JSON, no code fences: {"emoji":"<one emoji>","summary":"<preview>","bullets":["<item>","<item>"]}
+        """
+        let userText = context.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? "(no details provided)"
+            : context
+
+        let text = try await complete(
+            system: system, user: userText, url: url,
+            token: token, model: model, maxTokens: 500
+        )
+        let json = extractJSON(from: text)
+        let parsed = (try? JSONSerialization.jsonObject(with: Data(json.utf8))) as? [String: Any]
+
+        var emoji = (parsed?["emoji"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if emoji.isEmpty { emoji = standupFallbackEmoji }
+        let title = "\(forceEmojiPresentation(emoji))\u{00A0}Standup"
+
+        var summary = (parsed?["summary"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        summary = clampWords(summary, to: summaryWordLimit)
+        if summary.isEmpty { summary = "Daily standup" }
+
+        let items = (parsed?["bullets"] as? [String]) ?? []
+        let bullets = bulletList(from: items, fallback: text)
+        return StandupResult(title: title, summary: summary, bullets: bullets)
+    }
+
+    /// Force colour emoji presentation on a single-scalar emoji by appending the
+    /// variation selector (U+FE0F). Codepoints like the spiral notepad or shield
+    /// default to text and otherwise render as a blank box. Multi-scalar emoji
+    /// (flags, ZWJ sequences, ones that already carry a selector) are left alone.
+    private static func forceEmojiPresentation(_ emoji: String) -> String {
+        let scalars = Array(emoji.unicodeScalars)
+        guard scalars.count == 1, let scalar = scalars.first, scalar.properties.isEmoji else {
+            return emoji
+        }
+        return emoji + "\u{FE0F}"
+    }
+
+    /// Turn model items into a clean markdown bullet list. Falls back to the
+    /// raw response (split into lines) if the JSON had no usable array.
+    private static func bulletList(from items: [String], fallback: String) -> String {
+        var lines = items
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        if lines.isEmpty {
+            lines = fallback
+                .split(separator: "\n")
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+        }
+        return lines
+            .map { line in
+                var item = line
+                while item.hasPrefix("-") || item.hasPrefix("*") || item.hasPrefix("\u{2022}") {
+                    item.removeFirst()
+                    item = item.trimmingCharacters(in: .whitespaces)
+                }
+                return "- \(item)"
+            }
+            .joined(separator: "\n")
+    }
+
+    /// Shared Chat Completions call. Returns the assistant message text.
+    private static func complete(system: String, user: String, url: URL, token: String, model: String, maxTokens: Int) async throws -> String {
         let payload: [String: Any] = [
             "model": model,
-            "max_tokens": 150,
+            "max_tokens": maxTokens,
             "temperature": 0.2,
             "messages": [
                 ["role": "system", "content": system],
-                ["role": "user", "content": userText],
+                ["role": "user", "content": user],
             ],
         ]
 
@@ -89,18 +203,7 @@ enum AIService {
         let message = choices?.first?["message"] as? [String: Any]
         let text = (message?["content"] as? String) ?? ""
         guard !text.isEmpty else { throw AIError.emptyResponse }
-
-        let json = extractJSON(from: text)
-        let parsed = (try? JSONSerialization.jsonObject(with: Data(json.utf8))) as? [String: Any]
-
-        var category = (parsed?["title"] as? String ?? "").lowercased().trimmingCharacters(in: .whitespaces)
-        if !categories.contains(category) { category = "fix" }
-        let title = "\(emoji[category] ?? "") \(category.capitalized)".trimmingCharacters(in: .whitespaces)
-
-        var summary = (parsed?["summary"] as? String ?? text).trimmingCharacters(in: .whitespacesAndNewlines)
-        summary = clampWords(summary, to: summaryWordLimit)
-
-        return AISummary(title: title, summary: summary)
+        return text
     }
 
     /// Pull the first {...} object out of a model response (handles stray prose or fences).
