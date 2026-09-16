@@ -86,8 +86,8 @@ struct TaskCardView: View {
                     Text(task.title)
                         .font(.system(size: 14 * scale, weight: .bold))
                         .foregroundStyle(.primary)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.75)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
                         .strikethrough(task.done, color: .secondary)
                 }
                 let isSummarizing = store.summarizingIDs.contains(task.id)
