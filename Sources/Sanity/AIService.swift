@@ -36,10 +36,8 @@ enum AIService {
     /// needs to truncate with an ellipsis.
     static let summaryWordLimit = 6
 
-    /// Emoji used for a standup card when the model doesn't return a usable one.
-    /// The variation selector forces colour emoji presentation; without it this
-    /// codepoint defaults to text and renders as a blank box.
-    static let standupFallbackEmoji = "\u{1F5D2}\u{FE0F}"  // spiral notepad
+    /// Fixed emoji shown on every standup card title.
+    static let standupEmoji = "\u{1FAE1}"  // saluting face
 
     enum AIError: LocalizedError {
         case notConfigured
@@ -110,9 +108,8 @@ enum AIService {
         Rewrite the notes as short, specific markdown bullet points, one item per bullet.
         Only reorganize what is given: do not invent work, and keep the original meaning.
         If the notes clearly separate finished, planned, and blocked work, order them that way; do not add headers.
-        Choose a single emoji that best represents what they are focused on today.
         Write a preview of at most \(summaryWordLimit) words summarizing the day: plain, specific, no bullet, no trailing period, no quotes.
-        Respond with ONLY minified JSON, no code fences: {"emoji":"<one emoji>","summary":"<preview>","bullets":["<item>","<item>"]}
+        Respond with ONLY minified JSON, no code fences: {"summary":"<preview>","bullets":["<item>","<item>"]}
         """
         let userText = context.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             ? "(no details provided)"
@@ -125,9 +122,7 @@ enum AIService {
         let json = extractJSON(from: text)
         let parsed = (try? JSONSerialization.jsonObject(with: Data(json.utf8))) as? [String: Any]
 
-        var emoji = (parsed?["emoji"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        if emoji.isEmpty { emoji = standupFallbackEmoji }
-        let title = "\(forceEmojiPresentation(emoji))\u{00A0}Standup"
+        let title = "\(standupEmoji)\u{00A0}Standup"
 
         var summary = (parsed?["summary"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         summary = clampWords(summary, to: summaryWordLimit)
@@ -136,18 +131,6 @@ enum AIService {
         let items = (parsed?["bullets"] as? [String]) ?? []
         let bullets = bulletList(from: items, fallback: text)
         return StandupResult(title: title, summary: summary, bullets: bullets)
-    }
-
-    /// Force colour emoji presentation on a single-scalar emoji by appending the
-    /// variation selector (U+FE0F). Codepoints like the spiral notepad or shield
-    /// default to text and otherwise render as a blank box. Multi-scalar emoji
-    /// (flags, ZWJ sequences, ones that already carry a selector) are left alone.
-    private static func forceEmojiPresentation(_ emoji: String) -> String {
-        let scalars = Array(emoji.unicodeScalars)
-        guard scalars.count == 1, let scalar = scalars.first, scalar.properties.isEmoji else {
-            return emoji
-        }
-        return emoji + "\u{FE0F}"
     }
 
     /// Turn model items into a clean markdown bullet list. Falls back to the
