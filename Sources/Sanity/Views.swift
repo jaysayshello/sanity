@@ -86,7 +86,8 @@ struct TaskCardView: View {
                     Text(task.title)
                         .font(.system(size: 14 * scale, weight: .bold))
                         .foregroundStyle(.primary)
-                        .lineLimit(2)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
                         .strikethrough(task.done, color: .secondary)
                 }
                 let isSummarizing = store.summarizingIDs.contains(task.id)
@@ -347,15 +348,28 @@ struct EditorView: View {
             .filter { !$0.isEmpty }
             .joined(separator: "\n")
         do {
-            let result = try await AIService.summarize(
-                context: material,
-                token: store.aiToken,
-                baseURL: store.aiBaseURL,
-                model: store.aiModel
-            )
-            title = result.title
-            preview = result.summary
-            aiApplied = true
+            if TaskStore.isStandup(title: title, body: material) {
+                let result = try await AIService.organizeStandup(
+                    context: TaskStore.standupNotes(material),
+                    token: store.aiToken,
+                    baseURL: store.aiBaseURL,
+                    model: store.aiModel
+                )
+                title = result.title
+                preview = result.summary
+                context = result.bullets
+                aiApplied = true
+            } else {
+                let result = try await AIService.summarize(
+                    context: material,
+                    token: store.aiToken,
+                    baseURL: store.aiBaseURL,
+                    model: store.aiModel
+                )
+                title = result.title
+                preview = result.summary
+                aiApplied = true
+            }
         } catch {
             aiError = error.localizedDescription
         }
@@ -420,7 +434,7 @@ struct SettingsView: View {
                         .textFieldStyle(.roundedBorder)
                     TextField("Model", text: $store.aiModel)
                         .textFieldStyle(.roundedBorder)
-                    Text("Summarizes notes and picks a title: fix, monitor, notify, triage, mitigate, review, life.")
+                    Text("Summarizes notes and picks a title: fix, build, monitor, notify, triage, mitigate, review, life. Title a task \u{201C}Standup\u{201D} to organize the notes into bullets with an emoji for the day.")
                         .font(.system(size: 10))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)

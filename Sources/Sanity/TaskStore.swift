@@ -186,6 +186,41 @@ final class TaskStore: ObservableObject {
             .joined(separator: "\n")
     }
 
+    /// A task is organized as a daily standup instead of the usual category +
+    /// short preview when its title says "standup", or when the notes lead with
+    /// the word "standup" on its own line (the quick way to jot one down).
+    /// A mid-sentence mention (e.g. "create a standup card") does not count.
+    static func isStandup(_ task: TaskItem) -> Bool {
+        isStandup(title: task.title, body: task.body)
+    }
+
+    static func isStandup(title: String, body: String) -> Bool {
+        if title.lowercased().contains("standup") { return true }
+        let firstLine = body
+            .components(separatedBy: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .first(where: { !$0.isEmpty }) ?? ""
+        return firstLine.lowercased() == "standup"
+    }
+
+    /// Drop a leading "standup" keyword line so the organizer only sees the
+    /// actual notes, not the trigger word.
+    static func standupNotes(_ text: String) -> String {
+        var lines = text.components(separatedBy: "\n")
+        while let first = lines.first, first.trimmingCharacters(in: .whitespaces).isEmpty {
+            lines.removeFirst()
+        }
+        if let first = lines.first, first.trimmingCharacters(in: .whitespaces).lowercased() == "standup" {
+            lines.removeFirst()
+        }
+        return lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// The raw notes fed to the standup organizer (title/keyword are noise).
+    private func standupMaterial(for task: TaskItem) -> String {
+        TaskStore.standupNotes(task.body)
+    }
+
     /// Summarize every task that hasn't been summarized yet (new or pre-existing),
     /// one at a time, then mark each so it never re-runs.
     func summarizePendingIfNeeded() {
@@ -202,13 +237,23 @@ final class TaskStore: ObservableObject {
                 guard let task = self.tasks.first(where: { $0.id == id }), !task.summarized else { continue }
                 self.summarizingIDs.insert(id)
                 do {
-                    let result = try await AIService.summarize(
-                        context: self.summaryMaterial(for: task),
-                        token: self.aiToken,
-                        baseURL: self.aiBaseURL,
-                        model: self.aiModel
-                    )
-                    self.applyAISummary(taskID: id, title: result.title, preview: result.summary)
+                    if TaskStore.isStandup(task) {
+                        let result = try await AIService.organizeStandup(
+                            context: self.standupMaterial(for: task),
+                            token: self.aiToken,
+                            baseURL: self.aiBaseURL,
+                            model: self.aiModel
+                        )
+                        self.applyStandup(taskID: id, title: result.title, preview: result.summary, bullets: result.bullets)
+                    } else {
+                        let result = try await AIService.summarize(
+                            context: self.summaryMaterial(for: task),
+                            token: self.aiToken,
+                            baseURL: self.aiBaseURL,
+                            model: self.aiModel
+                        )
+                        self.applyAISummary(taskID: id, title: result.title, preview: result.summary)
+                    }
                 } catch {
                     self.failedSummaries.insert(id)
                 }
@@ -224,6 +269,18 @@ final class TaskStore: ObservableObject {
         let notes = tasks[idx].body.trimmingCharacters(in: .whitespacesAndNewlines)
         tasks[idx].title = title
         tasks[idx].body = [preview, notes].filter { !$0.isEmpty }.joined(separator: "\n\n")
+        tasks[idx].summarized = true
+        save()
+    }
+
+    /// Replace a standup task's body with a short preview line followed by the
+    /// organized bullet list, matching the layout of every other card.
+    private func applyStandup(taskID: UUID, title: String, preview: String, bullets: String) {
+        guard let idx = tasks.firstIndex(where: { $0.id == taskID }) else { return }
+        let preview = preview.trimmingCharacters(in: .whitespacesAndNewlines)
+        let bullets = bullets.trimmingCharacters(in: .whitespacesAndNewlines)
+        tasks[idx].title = title
+        tasks[idx].body = [preview, bullets].filter { !$0.isEmpty }.joined(separator: "\n\n")
         tasks[idx].summarized = true
         save()
     }
