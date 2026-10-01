@@ -19,11 +19,12 @@ struct StandupResult {
 /// preview. Auth is a bearer key (the `sk-...` style token).
 enum AIService {
     /// Allowed card titles. The model must pick exactly one.
-    static let categories = ["fix", "monitor", "notify", "triage", "mitigate", "review", "life"]
+    static let categories = ["fix", "build", "monitor", "notify", "triage", "mitigate", "review", "life"]
 
     /// Emoji shown before each title.
     static let emoji: [String: String] = [
         "fix": "\u{1F527}",
+        "build": "\u{1F3D7}\u{FE0F}",
         "monitor": "\u{1F4C8}",
         "notify": "\u{1F514}",
         "triage": "\u{1F50D}",
