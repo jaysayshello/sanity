@@ -41,6 +41,8 @@ struct WidgetView: View {
             Image(systemName: store.locked ? "lock.fill" : "line.3.horizontal")
                 .font(.system(size: 12 * scale, weight: .semibold))
                 .foregroundStyle(.secondary)
+                .frame(width: 22 * scale, height: 18 * scale)
+                .overlay { if !store.locked { WindowDragHandle() } }
                 .help(store.locked ? "Locked (unlock in settings)" : "Drag to move")
             Button {
                 showingSettings.toggle()
@@ -57,6 +59,21 @@ struct WidgetView: View {
         }
         .frame(width: 22 * scale)
         .padding(.top, 4 * scale)
+    }
+}
+
+/// Drags the widget window while pressed. SwiftUI content in an NSHostingView
+/// swallows mouse-downs, so `isMovableByWindowBackground` never sees them;
+/// this AppKit view starts the window drag explicitly.
+private struct WindowDragHandle: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView { DragView() }
+    func updateNSView(_ nsView: NSView, context: Context) {}
+
+    private final class DragView: NSView {
+        override var mouseDownCanMoveWindow: Bool { true }
+        override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+        override func mouseDown(with event: NSEvent) { window?.performDrag(with: event) }
+        override func resetCursorRects() { addCursorRect(bounds, cursor: .openHand) }
     }
 }
 
