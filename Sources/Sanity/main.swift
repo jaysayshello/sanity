@@ -178,9 +178,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func repositionAfterWake() {
-        // Screen geometry can keep settling for a moment after wake, so
-        // re-apply a couple of times.
-        for delay in [0.3, 1.0, 2.0] {
+        // The window server can move the panel late (and more than once) as the
+        // display settles after wake, so re-apply the anchor several times.
+        for delay in [0.3, 1.0, 2.0, 3.5, 5.0] {
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
                 self?.resizeToFit()
                 self?.panel.orderFrontRegardless()
@@ -387,6 +387,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func windowDidMove(_ notification: Notification) {
         guard (notification.object as? NSWindow) === panel else { return }
+        // Only trust moves the user made by dragging (mouse button down).
+        // System-initiated moves (e.g. after wake) must not overwrite the
+        // saved anchor, or the widget "remembers" the wrong spot.
+        guard NSEvent.pressedMouseButtons & 0x1 != 0 else { return }
         let frame = panel.frame
         anchorTopLeft = NSPoint(x: frame.minX, y: frame.maxY)
         persistLocation()
